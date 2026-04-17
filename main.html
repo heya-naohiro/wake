@@ -14,10 +14,12 @@
     <footer></footer>
     <script>
         let wakeLock = null;
+        let shouldMaintainWakeLock = false;
 
         async function startWakeLock() {
             try {
                 wakeLock = await navigator.wakeLock.request('screen');
+                shouldMaintainWakeLock = true;
                 document.getElementById('status').textContent = 'Wake Lock is active';
             } catch (err) {
                 console.error(`${err.name}, ${err.message}`);
@@ -29,9 +31,22 @@
             if (wakeLock) {
                 await wakeLock.release();
                 wakeLock = null;
+                shouldMaintainWakeLock = false;
                 document.getElementById('status').textContent = 'Wake Lock is inactive';
             }
         }
+
+        // バックグラウンド復帰時に自動で再掛け
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden && shouldMaintainWakeLock && !wakeLock) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    document.getElementById('status').textContent = 'Wake Lock is active (restored)';
+                } catch (err) {
+                    console.error(`Failed to restore Wake Lock: ${err.message}`);
+                }
+            }
+        });
     </script>
 </body>
 </html>
