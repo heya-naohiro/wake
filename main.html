@@ -8,22 +8,33 @@
     <header>wake lock</header>
     <main>
         <p id="status">Wake Lock is inactive</p>
+        <p id="video-status">Video keep-awake test is inactive</p>
         <button onclick="startWakeLock()">Start Wake Lock</button>
         <button onclick="stopWakeLock()">Stop Wake Lock</button>
+        <button onclick="startVideoKeepAwake()">Start Video Test</button>
+        <button onclick="stopVideoKeepAwake()">Stop Video Test</button>
+        <video id="keep-awake-video" loop muted playsinline preload="auto" style="width:1px;height:1px;opacity:0;position:absolute;pointer-events:none;" aria-hidden="true">
+            <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+        </video>
     </main>
     <footer></footer>
     <script>
         let wakeLock = null;
         let shouldMaintainWakeLock = false;
+        let shouldMaintainVideoPlayback = false;
+
+        const statusEl = document.getElementById('status');
+        const videoStatusEl = document.getElementById('video-status');
+        const keepAwakeVideo = document.getElementById('keep-awake-video');
 
         async function startWakeLock() {
             try {
                 wakeLock = await navigator.wakeLock.request('screen');
                 shouldMaintainWakeLock = true;
-                document.getElementById('status').textContent = 'Wake Lock is active';
+                statusEl.textContent = 'Wake Lock is active';
             } catch (err) {
                 console.error(`${err.name}, ${err.message}`);
-                document.getElementById('status').textContent = `Error: ${err.message}`;
+                statusEl.textContent = `Wake Lock error: ${err.message}`;
             }
         }
 
@@ -31,9 +42,29 @@
             if (wakeLock) {
                 await wakeLock.release();
                 wakeLock = null;
-                shouldMaintainWakeLock = false;
-                document.getElementById('status').textContent = 'Wake Lock is inactive';
             }
+
+            shouldMaintainWakeLock = false;
+            statusEl.textContent = 'Wake Lock is inactive';
+        }
+
+        async function startVideoKeepAwake() {
+            try {
+                keepAwakeVideo.currentTime = 0;
+                await keepAwakeVideo.play();
+                shouldMaintainVideoPlayback = true;
+                videoStatusEl.textContent = 'Video keep-awake test is active';
+            } catch (err) {
+                console.error(`Video playback error: ${err.name}, ${err.message}`);
+                videoStatusEl.textContent = `Video test error: ${err.message}`;
+            }
+        }
+
+        function stopVideoKeepAwake() {
+            shouldMaintainVideoPlayback = false;
+            keepAwakeVideo.pause();
+            keepAwakeVideo.currentTime = 0;
+            videoStatusEl.textContent = 'Video keep-awake test is inactive';
         }
 
         // バックグラウンド復帰時に自動で再掛け
@@ -41,10 +72,31 @@
             if (!document.hidden && shouldMaintainWakeLock && !wakeLock) {
                 try {
                     wakeLock = await navigator.wakeLock.request('screen');
-                    document.getElementById('status').textContent = 'Wake Lock is active (restored)';
+                    statusEl.textContent = 'Wake Lock is active (restored)';
                 } catch (err) {
                     console.error(`Failed to restore Wake Lock: ${err.message}`);
                 }
+            }
+
+            if (!document.hidden && shouldMaintainVideoPlayback && keepAwakeVideo.paused) {
+                try {
+                    await keepAwakeVideo.play();
+                    videoStatusEl.textContent = 'Video keep-awake test is active (restored)';
+                } catch (err) {
+                    console.error(`Failed to restore video playback: ${err.message}`);
+                }
+            }
+        });
+
+        keepAwakeVideo.addEventListener('ended', async () => {
+            if (!shouldMaintainVideoPlayback) {
+                return;
+            }
+
+            try {
+                await keepAwakeVideo.play();
+            } catch (err) {
+                console.error(`Failed to resume video loop: ${err.message}`);
             }
         });
     </script>
