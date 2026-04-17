@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>wake lock</title>
+</head>
+<body>
+    <header>wake lock</header>
+    <main>
+        <p id="status">Wake Lock is inactive</p>
+        <button onclick="startWakeLock()">Start Wake Lock</button>
+        <button onclick="stopWakeLock()">Stop Wake Lock</button>
+    </main>
+    <footer></footer>
+    <script>
+        let wakeLock = null;
+
+        async function startWakeLock() {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                document.getElementById('status').textContent = 'Wake Lock is active';
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+                document.getElementById('status').textContent = `Error: ${err.message}`;
+            }
+        }
+
+        async function stopWakeLock() {
+            if (wakeLock) {
+                await wakeLock.release();
+                wakeLock = null;
+                document.getElementById('status').textContent = 'Wake Lock is inactive';
+            }
+        }
+    </script>
+</body>
+</html>
